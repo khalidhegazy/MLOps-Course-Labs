@@ -142,54 +142,69 @@ def train(X_train, y_train):
 
 
 def main():
-    ### Set the tracking URI and experiment name
+    # Set the tracking URI and experiment name
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
     mlflow.set_experiment("Customer Churn Prediction")
 
-    with mlflow.start_run():
+    # Load and preprocess the data once
+    df = pd.read_csv("../dataset/Churn_Modelling.csv")
+    col_transf, X_train, X_test, y_train, y_test = preprocess(df)
 
-        df = pd.read_csv("../dataset/Churn_Modelling.csv")
-        col_transf, X_train, X_test, y_train, y_test = preprocess(df)
-
-        # Log parameters
+    with mlflow.start_run(run_name="Logistic Regression"):
         mlflow.log_param("model_type", "LogisticRegression")
         mlflow.log_param("max_iter", 1000)
 
-        # Log preprocessing step
         mlflow.sklearn.log_model(col_transf, "preprocessor")
 
-        # Train model and log it
         model = train(X_train, y_train)
-
-        # Predict
         y_pred = model.predict(X_test)
 
-        # Compute and log metrics
-        acc = accuracy_score(y_test, y_pred)
-        prec = precision_score(y_test, y_pred)
-        rec = recall_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
+        # Metrics
+        mlflow.log_metric("accuracy", accuracy_score(y_test, y_pred))
+        mlflow.log_metric("precision", precision_score(y_test, y_pred))
+        mlflow.log_metric("recall", recall_score(y_test, y_pred))
+        mlflow.log_metric("f1_score", f1_score(y_test, y_pred))
 
-        mlflow.log_metric("accuracy", acc)
-        mlflow.log_metric("precision", prec)
-        mlflow.log_metric("recall", rec)
-        mlflow.log_metric("f1_score", f1)
+        mlflow.set_tag("developer", "kHALID")
 
-        # Log tag
-        mlflow.set_tag("developer", "kHALID") 
-
-        # Confusion Matrix
         conf_mat = confusion_matrix(y_test, y_pred, labels=model.classes_)
-        conf_mat_disp = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=model.classes_)
-        conf_mat_disp.plot()
-        
-        # Save and log confusion matrix plot
-        plt.title("Confusion Matrix")
-        plot_path = "confusion_matrix.png"
+        ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=model.classes_).plot()
+        plt.title("Confusion Matrix - Logistic Regression")
+        plot_path = "conf_matrix_log_reg.png"
         plt.savefig(plot_path)
         mlflow.log_artifact(plot_path)
+        plt.clf()
 
-        plt.show()
+
+    from sklearn.ensemble import RandomForestClassifier
+
+    with mlflow.start_run(run_name="Random Forest"):
+        mlflow.log_param("model_type", "RandomForestClassifier")
+        mlflow.log_param("n_estimators", 100)
+        mlflow.log_param("max_depth", 10)
+
+        model_rf = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
+        model_rf.fit(X_train, y_train)
+
+        signature = infer_signature(X_train, model_rf.predict(X_train))
+        mlflow.sklearn.log_model(model_rf, "random_forest_model", signature=signature)
+
+        y_pred_rf = model_rf.predict(X_test)
+
+        mlflow.log_metric("accuracy", accuracy_score(y_test, y_pred_rf))
+        mlflow.log_metric("precision", precision_score(y_test, y_pred_rf))
+        mlflow.log_metric("recall", recall_score(y_test, y_pred_rf))
+        mlflow.log_metric("f1_score", f1_score(y_test, y_pred_rf))
+
+        mlflow.set_tag("developer", "kHALID")
+
+        conf_mat_rf = confusion_matrix(y_test, y_pred_rf, labels=model_rf.classes_)
+        ConfusionMatrixDisplay(confusion_matrix=conf_mat_rf, display_labels=model_rf.classes_).plot()
+        plt.title("Confusion Matrix - Random Forest")
+        plot_path_rf = "conf_matrix_random_forest.png"
+        plt.savefig(plot_path_rf)
+        mlflow.log_artifact(plot_path_rf)
+        plt.clf()
 
 
 if __name__ == "__main__":
