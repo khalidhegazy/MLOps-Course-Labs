@@ -209,3 +209,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# RandomForest model is better than LogisticRegression with higher accuracy and f1 score.
+
+# Example output:
+# RandomForest : 
+# accuracy : 0.76778413736713
+# f1_score : 0.7601351351351351
+# precision : 0.7718696397941681
+# recall : 0.7487520798668885
+
+# LogisticRegression : 
+# accuracy : 0.7064595257563369
+# f1_score : 0.6955046649703138
+# precision : 0.7093425605536332
+# recall : 0.6821963394342762
+# train_features : 11
+# train_samples : 2851
